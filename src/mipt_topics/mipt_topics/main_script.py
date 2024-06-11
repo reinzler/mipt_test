@@ -34,6 +34,7 @@ class EmergencyStopNode(Node):
 
         # Now create flags for all topics
         self.stop_cmd_park, self.stop_cmd_human, self.stop_cmd_robot, self.stop_cmd_belt = True, True, True, True
+        self.emergency_flag = None
 
     def stop_cmd_park_callback(self, msg):
         if msg.data == 0:
@@ -41,6 +42,7 @@ class EmergencyStopNode(Node):
             msg_signal = Int8()
             msg_signal.data = 0
             self.emergency_signal.publish(msg_signal)
+            self.emergency_flag = True
         else:
             self.stop_cmd_park = True
         self.check_if_can_continue_movement()
@@ -51,6 +53,7 @@ class EmergencyStopNode(Node):
             msg_signal = Int8()
             msg_signal.data = 1
             self.emergency_signal.publish(msg_signal)
+            self.emergency_flag = True
         else:
             self.stop_cmd_human = True
         self.check_if_can_continue_movement()
@@ -58,6 +61,7 @@ class EmergencyStopNode(Node):
     def stop_cmd_robot_callback(self, msg):
         if msg.data == 0:
             self.stop_cmd_robot = False
+            self.emergency_flag = True
         else:
             self.stop_cmd_robot = True
         self.check_if_can_continue_movement()
@@ -68,6 +72,7 @@ class EmergencyStopNode(Node):
             msg_signal = Int8()
             msg_signal.data = 2
             self.emergency_signal.publish(msg_signal)
+            self.emergency_flag = True
         else:
             self.stop_cmd_belt = True
         self.check_if_can_continue_movement()
@@ -75,12 +80,12 @@ class EmergencyStopNode(Node):
     def check_if_can_continue_movement(self):
         move_msg = Int8()
         emergency_break = all([self.stop_cmd_park, self.stop_cmd_human, self.stop_cmd_robot, self.stop_cmd_belt])
-        if emergency_break:
+        if emergency_break and self.emergency_flag:
             move_msg.data = 1
             for _ in range(3):
                 self.emergency_stop.publish(move_msg)
-
-        else:
+            self.emergency_flag = False
+        if not emergency_break:
             move_msg.data = 0
             self.emergency_stop.publish(move_msg)
 
